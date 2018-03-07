@@ -1,0 +1,13 @@
+#Set working directory
+workdir: "$HOME/scratch/admixture_analysis"
+
+#Set sample names from sample_list.txt
+SAMPLES: 
+  - CAH9
+
+#Define variables
+ADAPTERS: "/storage/work/cxb585/bin/Trimmomatic-0.36/adapters/TruSeq3-PE.fa"
+PICARD: "$PICARD/picard.jar"
+
+#Select modules to load
+MODULES: ["python", "trimmomatic", "samtools", "bwa", "bamtools", "picard"]
