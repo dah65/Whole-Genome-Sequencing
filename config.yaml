@@ -2,12 +2,15 @@
 workdir: "$HOME/scratch/admixture_analysis"
 
 #Set sample names from sample_list.txt
-SAMPLES: 
-  - CAH9
+SAMPLES: ["CAH9"]
+
+#Set reference genome name
+GENOME: "p_humanus_reference.fa"
 
 #Define variables
 ADAPTERS: "/storage/work/cxb585/bin/Trimmomatic-0.36/adapters/TruSeq3-PE.fa"
 PICARD: "$PICARD/picard.jar"
+GATK: "$GATK/GenomeAnalysisTK"
 
 #Select modules to load
-MODULES: ["python", "trimmomatic", "samtools", "bwa", "bamtools", "picard"]
+MODULES: ["bamtools", "bcftools", "bwa", "gatk", "picard", "python", "samtools", "trimmomatic", "vcftools"]
