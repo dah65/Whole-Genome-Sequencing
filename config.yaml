@@ -2,12 +2,7 @@
 workdir: "$HOME/scratch/admixture_analysis"
 
 #Set sample names
-SAMPLES:
-  - BH10_F1_1
-  - BH4_FBL
-  - BH4_MHL
-  - Col_Head_1
-  - Col_Body_1
+SAMPLES: ["BH10_F1_1", "BH4_FBL", "BH4_MHL", "Col_Head_1", "Col_Body_1"]
 
 #Set population names and samples for Fst computation
 POP_1: "Col_Head"
@@ -18,8 +13,9 @@ GENOME: "p_humanus_reference.fa"
 
 #Define important paths
 ADAPTERS: "/storage/work/cxb585/bin/Trimmomatic-0.36/adapters/TruSeq3-PE.fa"
+GATK: "$GATK/GenomeAnalysisTK.jar"
 PICARD: "$PICARD/picard.jar"
-GATK: "$GATK/GenomeAnalysisTK"
+TRIMMOMATIC: "$TRIMMIMATIC"
 
 #Select modules to load
 MODULES: ["bamtools", "bcftools", "bwa", "gatk", "picard", "python", "samtools", "trimmomatic", "vcftools"]

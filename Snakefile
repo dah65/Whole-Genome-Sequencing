@@ -4,8 +4,6 @@ configfile: "./config.yaml"
 
 rule all:
     input:
-        #load_modules
-        expand("{module}", module=config["MODULES"]),
         #trim reads
         expand("data/{sample}_{read}.fastq.gz", sample=config["SAMPLES"], read=["R1", "R2"]),
         #bwa_map_and_samtools_make_bam
@@ -38,13 +36,9 @@ rule all:
         #joint_variant_calling
         "data/variants/cohort.g.vcf.gz"
 
-localrules: all
-
 rule load_modules:
-    input:
-        "{{module}}"
     shell:
-        "module load {input}"
+        "module load {config[MODULES]}"
 
 rule trim_reads:
     input:
@@ -56,7 +50,7 @@ rule trim_reads:
         "data/trimmed_reads/{sample}_R2_unpaired.fastq.gz"
     log: "logs/trim/{sample}.trim.log"
     shell:
-        "java -jar $TRIMMOMATIC PE -phred33 {input} {output} ILLUMINACLIP:{config[ADAPTERS]}:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36"
+        "java -jar {config[TRIMMOMATIC]} PE -phred33 -trimlog {log} {input} {output} ILLUMINACLIP:{config[ADAPTERS]}:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36"
     
 rule bwa_map_and_samtools_make_bam:
     input:
@@ -93,7 +87,7 @@ rule fix_mate_pairs:
     log: "logs/{sample}.fix_mate_pairs.log" 
     shell:  
         """
-        java -jar $PICARD FixMateInformation  
+        java -jar {config[PICARD]} FixMateInformation  
             I = {input} 
             O = {output}  
             SO = coordinate  
@@ -123,7 +117,7 @@ rule remove_duplicate_reads:
     log: "logs/{sample}.remove_duplicate_reads.log"
     shell:
         """
-        java -jar $PICARD MarkDuplicates  
+        java -jar {config[PICARD]} MarkDuplicates  
             INPUT = {input} 
             OUTPUT = {output}  
             VALIDATION_STRINGENCY=SILENT  
@@ -139,7 +133,7 @@ rule add_read_groups:
     log: "logs/{sample}.add_read_groups.log"
     shell:
         """
-        java - jar $PICARD AddOrReplaceReadGroups  
+        java - jar {config[PICARD]} AddOrReplaceReadGroups  
             INPUT = {input} 
             OUTPUT = {output}  
             RGLB = {wildcards.sample}.PE  
@@ -174,12 +168,13 @@ rule local_realignment_ID:
     log: "logs/{sample}.local_realignment_ID.log"
     shell:
         """
-        java - jar - Xmx4g -jar $GATK  
+        java - jar - Xmx4g -jar {config[GATK]}  
             -T RealignerTargetCreator 
             --filter_mismatching_base_and_quals  
             --num_threads 8  
             -I {input}  
             -o {output}
+            --log_to_file {log}
         """
 
 rule local_realignment:
@@ -191,13 +186,14 @@ rule local_realignment:
     log: "logs/{sample}.local_realignment.log"
     shell:
         """
-        java -jar -Xmx24g $GATK  
+        java -jar -Xmx24g {config[GATK]}  
             -I {input.sample}  
             -R {config[GENOME]}  
             --filter_mismatching_base_and_quals  
             -T IndelRealigner  
             -targetIntervals {input.list}  
             -o {output}
+            --log_to_file {log}
         """
 
 rule call_variants:
@@ -209,13 +205,14 @@ rule call_variants:
     log: "logs/{sample}.call_variants.log"
     shell:
         """
-        java -jar -Xmx4g $GATK
+        java -jar -Xmx4g {config[GATK]}
             -T HaplotypeCaller
             -R {config[GENOME]}
             -I {input}
             -O {output.gvcf}
             -ERC GVCF
             -bamout {output.global_realign}
+            --log_to_file {log}
         """
 
 rule combine_variant_files:
@@ -226,11 +223,12 @@ rule combine_variant_files:
     log: "logs/combine_variant_files.log"
     shell:
         """
-        java -jar -Xmx4g $GATK
+        java -jar -Xmx4g {config[GATK]}
             -T CombineGVCFs
             -R {config[GENOME]}
             -- {input}
             -O {output}
+            --log_to_file {log}
         """
 
 rule joint_variant_calling:
@@ -241,8 +239,9 @@ rule joint_variant_calling:
     log: "logs/joint_variant_calling.log"
     shell:
         """
-        java -jar -Xmx4g $GATK
+        java -jar -Xmx4g {config[GATK]}
             -T GenotypeGVCFs
             -V {input}
             -O {output}
+            --log_to_file {log}
         """
