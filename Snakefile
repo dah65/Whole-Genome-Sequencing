@@ -1,6 +1,8 @@
 #!/usr/bin/env/ python
-
-configfile: "./config.yaml"
+shell.prefix("set -o pipefail; ")
+shell.executable("/bin/bash")
+shell.prefix("source ~/.bashrc; ")
+configfile: "config.yaml"
 
 rule all:
     input:
@@ -34,7 +36,18 @@ rule all:
         #combine_variant_files
         expand("data/variants/{sample}.g.vcf.gz", sample=config["SAMPLES"]),
         #joint_variant_calling
-        "data/variants/cohort.g.vcf.gz"
+        "data/variants/cohort.g.vcf.gz",
+        #extract_snps
+        "data/variants/combined.vcf.gz",
+        #extract_indels
+        "data/variants/combined.vcf.gz",
+        #hard_filter_snps
+        "data/variants/combined_snps.vcf",
+        #hard_filter_indels
+        "data/variants/combined_indels.vcf",
+        #convert_vcf_to_GESTE:
+        "data/variants/combined_snps.vcf",
+        "data/population_definitions.spid"
 
 rule load_modules:
     shell:
@@ -245,3 +258,89 @@ rule joint_variant_calling:
             -O {output}
             --log_to_file {log}
         """
+
+rule extract_snps:
+    input:
+        "data/variants/combined.vcf.gz"
+    output:
+        "data/variants/combined_snps.vcf"
+    log: "logs/extract_snps.log"
+    shell:
+        """
+        java -jar {config[GATK]}
+            -T SelectVariants
+            -R {config[GENOME]}
+            -V {input}
+            -o {output}
+            -selectType SNP
+        """
+
+rule extract_indels:
+    input:
+        "data/variants/combined.vcf.gz"
+    output:
+        "data/variants/combined_indels.vcf"
+    log: "logs/extract_indels.log"
+    shell:
+        """
+        java -jar {config[GATK]}
+            -T SelectVariants
+            -R {config[GENOME]}
+            -V {input}
+            -o {output}
+            -selectType INDEL
+        """
+
+rule hard_filter_snps:
+    input: 
+        "data/variants/combined_snps.vcf" 
+    output:
+        "data/variants/combined_snps.flt.vcf"
+    log: "logs/hard_filter_snps.log"
+    shell:
+        """
+        java -jar {config[GATK]}
+            -T VariantFiltration
+            -R {config[GENOME]}
+            -V {input}
+            --filterExpression "QD < 2.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0 || HaplotypeScore > 13.0"
+            --filterName "NGS_snp_filter"
+            -o {output}
+            --missingValuesInExpressionsShouldEvaluateAsFailing 
+        """
+
+rule hard_filter_indels:
+    input:
+        "data/variants/combined_indels.vcf"
+    output:
+        "data/variants/combined_indels.flt.vcf"
+    log: "logs/hard_filter_indels.log"
+    shell:
+        """
+        java -jar {config[GATK]}
+            -T VariantFiltration
+            -R {config[GENOME]}
+            -V {input}
+            --filterExpression "QD < 2.0 || FS > 200.0 || MQ < 40.0 || ReadPosRankSum < -20.0"
+            --filterName "NGS_indel_filter"
+            -o {output}
+            --missingValuesInExpressionsShouldEvaluateAsFailing 
+        """
+
+rule convert_vcf_to_GESTE:
+    input:
+        vcf="data/variants/combined_snps.vcf",
+        spid="data/population_definitions.spid"
+    output:
+        "data/variants/combined_snps.GESTE.txt"
+    log: "logs/convert_vcf_to_GESTE.log"
+    shell:
+        """
+        java -Xmx1024m -Xms512M -jar {config[PGDSPIDER]}
+            -inputfile {input.vcf}
+            -inputformat VCF
+            -output {output}
+            -outputformat GESTE_BAYE_SCAN
+            -spid {input.spid}
+        """
+        
