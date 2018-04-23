@@ -1,0 +1,1 @@
+module load picard;java -jar /storage/work/cxb585/bin/picard-2.10.10/picard.jar AddOrReplaceReadGroups INPUT=data/aligned_reads/Col_Body_1.PE.bwa.sorted.fixed.filtered.postdup.bam OUTPUT=data/aligned_reads/Col_Body_1.PE.bwa.sorted.fixed.filtered.postdup.RG.bam RGLB=Col_Body_1.PE RGPL=Illumina RGPU=Group1 RGSM=Col_Body_1.PE

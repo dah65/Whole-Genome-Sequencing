@@ -1,0 +1,1 @@
+module load plink;plink --file data/variants/combined_snps.maf.no_chr.plink --allow-extra-chr --indep 50 5 1.25;plink --file data/variants/combined_snps.maf.no_chr.plink --allow-extra-chr --extract plink.prune.in --make-bed;plink --bfile plink --allow-extra-chr --recode vcf --out data/variants/combined_snps.maf.ld; > data/variants/combined_snps.maf.ld;rm plink*
