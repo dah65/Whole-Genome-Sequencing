@@ -1,0 +1,26 @@
+#!/bin/bash
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=4:00:00
+#PBS -M coalhende@gmail.com
+#PBS -N align
+#PBS -m abe
+#PBS -e /storage/home/cah422/scratch/admixture_analysis/pbs_output/${PBS_JOBNAME}.e${PBS_JOBID}.${PBS_ARRAYID}
+#PBS -o /storage/home/cah422/scratch/admixture_analysis/pbs_output/${PBS_JOBNAME}.o${PBS_JOBID}.${PBS_ARRAYID}
+
+# -------------------------------------------------- #
+#Align reads to reference genome with BWA mem
+# -------------------------------------------------- #
+
+#Move to correct directory
+cd /storage/home/cah422/scratch/admixture_anaysis
+
+##Set variable names
+GENOME=p_humanus_reference.fa
+IND_ID=CAH9
+TRIMMED_READ1=${IND_ID}_R1.fastq_paired.fastq.gz
+TRIMMED_READ2=${IND_ID}_R2.fastq_paired.fastq.gz
+
+#Run trimmomatic
+sh scripts/align.sh $GENOME $TRIMMED_READ1 $TRIMMED_READ2
+
+exit;  

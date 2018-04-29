@@ -1,4 +1,5 @@
 #Set working directory
+<<<<<<< HEAD
 workdir: "/storage/home/cah422/scratch/NGS_map-snakemake"
 
 #Set sample names
@@ -23,3 +24,20 @@ PICARD: "/storage/work/cxb585/bin/picard-2.10.10/picard.jar"
 SAMTOOLS: "/storage/work/cxb585/bin/samtools-1.5/bin/samtools"
 TRIMMOMATIC: "/storage/work/cxb585/bin/Trimmomatic-0.36/trimmomatic-0.36.jar"
 VCFTOOLS: "/storage/work/cxb585/bin/vcftools/bin/vcftools"
+=======
+workdir: "$HOME/scratch/admixture_analysis"
+
+#Set sample names from sample_list.txt
+SAMPLES: ["CAH9"]
+
+#Set reference genome name
+GENOME: "p_humanus_reference.fa"
+
+#Define variables
+ADAPTERS: "/storage/work/cxb585/bin/Trimmomatic-0.36/adapters/TruSeq3-PE.fa"
+PICARD: "$PICARD/picard.jar"
+GATK: "$GATK/GenomeAnalysisTK"
+
+#Select modules to load
+MODULES: ["bamtools", "bcftools", "bwa", "gatk", "picard", "python", "samtools", "trimmomatic", "vcftools"]
+>>>>>>> 5b31670b4a70f1f81eea04c6ff468f5af70e77e5
