@@ -1,0 +1,1 @@
+module load gatk;java -jar -Xmx4g /storage/work/cxb585/bin/GenomeAnalysisTK-3.8-0-ge9d806836/GenomeAnalysisTK.jar -T CombineGVCFs -R genomes/p_humanus_reference.fa -V data/variants/variants.list -o data/variants/cohort.g.vcf.gz --log_to_file logs/combine_variant_files.log

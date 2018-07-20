@@ -1,0 +1,1 @@
+module load gatk;java -jar /storage/work/cxb585/bin/GenomeAnalysisTK-3.8-0-ge9d806836/GenomeAnalysisTK.jar -T SelectVariants -R genomes/p_humanus_reference.fa -V data/variants/combined_snps.flt.vcf -o data/variants/combined_snps.flt.maf.vcf -select 'AF > 0.05' --restrictAllelesTo BIALLELIC

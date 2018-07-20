@@ -26,8 +26,6 @@ rule all:
         expand("data/aligned_reads/{sample}.PE.bwa.sorted.fixed.filtered.postdup.RG.bam", sample=config["SAMPLES"]),
         #remove_louse_mitochondrial_reads
         expand("data/aligned_reads/{sample}.PE.bwa.sorted.fixed.filtered.postdup.RG.passed.bam", sample=config["SAMPLES"]),
-        #index_bam_with_mitochondrial_reads_removed
-        expand("data/aligned_reads/{sample}.PE.bwa.sorted.fixed.filtered.postdup.RG.passed.mito_removed.bam", sample=config["SAMPLES"]),
         #local_realignment_ID
         expand("data/aligned_reads/{sample}.PE.bwa.sorted.fixed.filtered.postdup.RG.passed.mito_removed.bam", sample=config["SAMPLES"]),
         #local_realignment
@@ -36,7 +34,7 @@ rule all:
         #call_variants
         expand("data/aligned_reads/{sample}.PE.bwa.sorted.fixed.filtered.postdup.RG.passed.mito_removed.local_realign.bam", sample=config["SAMPLES"]),
         #combine_variant_files
-        expand("data/variants/{sample}.g.vcf.gz", sample=config["SAMPLES"]),
+        "data/variants/variants.list",
         #joint_variant_calling
         "data/variants/cohort.g.vcf.gz",
         #extract_snps
@@ -47,9 +45,22 @@ rule all:
         "data/variants/combined_snps.vcf",
         #hard_filter_indels
         "data/variants/combined_indels.vcf",
-        #convert_vcf_to_GESTE:
+        #filter_maf
         "data/variants/combined_snps.vcf",
-        "data/population_definitions.spid"
+        #format_vcf_for_map_ped
+        "data/variants/combined_snps.flt.maf.vcf",
+        #make_map_ped
+        "data/variants/combined_snps.flt.maf.no_chr.vcf",
+        #filter_ld
+        "data/variants/combined_snps.flt.maf.no_chr.plink",
+        #convert_vcf_to_GESTE
+        "data/variants/combined_snps.flt.maf.ld",
+        "data/population_definitions.spid",
+        #remove_temporary_files
+        "data/variants/combined_snps.flt.maf.ld",
+        "data/variants/combined_snps.flt.maf.no_chr.plink",
+        #final
+        "data/variants/combined_snps.flt.maf.ld.GESTE.txt"
 
 rule trim_reads:
     input:
@@ -152,17 +163,8 @@ rule remove_louse_mitochondrial_reads:
     log: "logs/{sample}.louse_mito_removal.log"
     shell:
         "module load samtools;"
-        "samtools idxstats {input} | cut -f 1 | grep -v FJ* | xargs samtools view -b {input} > {output}"
-
-rule index_bam_with_mitochondrial_reads_removed:
-    input:
-        "data/aligned_reads/{sample}.PE.bwa.sorted.fixed.filtered.postdup.RG.passed.mito_removed.bam"
-    output:
-        "data/aligned_reads/{sample}.PE.bwa.sorted.fixed.filtered.postdup.RG.passed.mito_removed.bam.bai"
-    log: "logs/{sample}.index_mito_removed_bam.log"
-    shell:
-        "module load samtools;"
-        "samtools index -b {input} {output}"
+        "samtools idxstats {input} | cut -f 1 | grep -v FJ* | xargs samtools view -b {input} > {output};"
+        "samtools index -b {output} {output}.bai"
 
 rule local_realignment_ID:
     input:
@@ -194,17 +196,17 @@ rule call_variants:
     log: "logs/{sample}.call_variants.log"
     shell:
         "module load gatk;"
-        "java -jar -Xmx4g {config[GATK]} -T HaplotypeCaller -R {config[GENOME]} -I {input} -O {output.gvcf} -ERC GVCF -bamout {output.global_realign} --log_to_file {log}"
+        "java -jar -Xmx4g {config[GATK]} -T HaplotypeCaller -R {config[GENOME]} -I {input} -o {output.gvcf} -ERC GVCF -bamout {output.global_realign} --log_to_file {log}"
 
 rule combine_variant_files:
     input:
-        expand("data/variants/{sample}.g.vcf.gz", sample=config["SAMPLES"])
+        "data/variants/variants.list"
     output:
         "data/variants/cohort.g.vcf.gz"
     log: "logs/combine_variant_files.log"
     shell:
         "module load gatk;"
-        "java -jar -Xmx4g {config[GATK]} -T CombineGVCFs -R {config[GENOME]} -- {input} -O {output} --log_to_file {log}"
+        "java -jar -Xmx4g {config[GATK]} -T CombineGVCFs -R {config[GENOME]} -V {input} -o {output} --log_to_file {log}"
 
 rule joint_variant_calling:
     input:
@@ -214,7 +216,7 @@ rule joint_variant_calling:
     log: "logs/joint_variant_calling.log"
     shell:
         "module load gatk;"
-        "java -jar -Xmx4g {config[GATK]} -T GenotypeGVCFs -V {input} -O {output} --log_to_file {log}"
+        "java -jar -Xmx4g {config[GATK]} -T GenotypeGVCFs -R {config[GENOME]} -V {input} -o {output} --log_to_file {log}"
 
 rule extract_snps:
     input:
@@ -250,19 +252,72 @@ rule hard_filter_indels:
     input:
         "data/variants/combined_indels.vcf"
     output:
-        "data/variants/combined_indels.flt.vcf"
+        "data/variants/combined_indels.vcf"
     log: "logs/hard_filter_indels.log"
     shell:
         "module load gatk;"
         "java -jar {config[GATK]} -T VariantFiltration -R {config[GENOME]} -V {input} --filterExpression 'QD < 2.0 || FS > 200.0 || MQ < 40.0 || ReadPosRankSum < -20.0' --filterName 'NGS_indel_filter' -o {output} --missingValuesInExpressionsShouldEvaluateAsFailing"
 
+rule filter_maf:
+    input:
+        "data/variants/combined_snps.flt.vcf"
+    output:
+        "data/variants/combined_snps.flt.maf.vcf"
+    log: "logs/filter_maf.log"
+    shell:
+        "module load gatk;"
+        "java -jar {config[GATK]} -T SelectVariants -R {config[GENOME]} -V {input} -o {output} -select 'AF > 0.05' --restrictAllelesTo BIALLELIC"
+
+rule format_vcf_for_map_ped:
+    input:
+        "data/variants/combined_snps.flt.maf.vcf"
+    output:
+        "data/variants/combined_snps.flt.maf.no_chr.vcf"
+    log: "logs/format_vcf_for_map_ped.log"
+    shell:
+        "sed 's/^DS//' {input} | sed '/^FJ/d' | sed 's/ID=DS/ID=/' | sed '/ID=FJ/d'  > {output}"
+
+rule make_map_ped:
+    input:
+        "data/variants/combined_snps.flt.maf.no_chr.vcf"
+    output:
+        "data/variants/combined_snps.flt.maf.no_chr.plink"
+    output:
+    log: "logs/make_bed_map.log"
+    shell:
+        "module load vcftools;"
+        "{config[VCFTOOLS]} --vcf {input} --plink --out {output};"
+        " > {output}"
+
+rule filter_ld:
+    input:
+        "data/variants/combined_snps.flt.maf.no_chr.plink"
+    output:
+        "data/variants/combined_snps.flt.maf.ld"
+    log: "logs/filter_ld.log"
+    shell:
+        "module load plink;"
+        "plink --file {input} --allow-extra-chr --indep 50 5 1.25;"
+        "plink --file {input} --allow-extra-chr --extract plink.prune.in --make-bed;"
+        "plink --bfile plink --allow-extra-chr --recode vcf --out {output};"
+        " > {output};"
+        "rm plink*"
+
 rule convert_vcf_to_GESTE:
     input:
-        vcf="data/variants/combined_snps.vcf",
+        vcf="data/variants/combined_snps.flt.maf.ld",
         spid="data/population_definitions.spid"
     output:
-        "data/variants/combined_snps.GESTE.txt"
+        "data/variants/combined_snps.flt.maf.ld.GESTE.txt"
     log: "logs/convert_vcf_to_GESTE.log"
     shell:
-        "module load pdgspider"
-        "java -Xmx1024m -Xms512M -jar {config[PGDSPIDER]} -inputfile {input.vcf} -inputformat VCFm -output {output} -outputformat GESTE_BAYE_SCAN -spid {input.spid}"
+        "module load pdgspider;"
+        "java -Xmx1024m -Xms512M -jar {config[PDGSPIDER]} -inputfile {input.vcf}.vcf -inputformat VCF -outputfile {output} -outputformat GESTE_BAYE_SCAN -spid {input.spid}"
+
+rule remove_temporary_files:
+    input:
+        "data/variants/combined_snps.flt.maf.ld",
+        "data/variants/combined_snps.flt.maf.no_chr.plink"
+    log: "logs/remove_temporary_files.log"
+    shell:
+        "rm {input}"

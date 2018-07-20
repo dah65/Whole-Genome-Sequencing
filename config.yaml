@@ -1,4 +1,5 @@
 #Set working directory
+
 workdir: "$HOME/scratch/admixture_analysis"
 
 #Set sample names
@@ -21,3 +22,5 @@ PICARD: "/storage/work/cxb585/bin/picard-2.10.10/picard.jar"
 SAMTOOLS: "/storage/work/cxb585/bin/samtools-1.5/bin/samtools"
 TRIMMOMATIC: "/storage/work/cxb585/bin/Trimmomatic-0.36/trimmomatic-0.36.jar"
 
+#Select modules to load
+MODULES: ["bamtools", "bcftools", "bwa", "gatk", "picard", "python", "samtools", "trimmomatic", "vcftools"]

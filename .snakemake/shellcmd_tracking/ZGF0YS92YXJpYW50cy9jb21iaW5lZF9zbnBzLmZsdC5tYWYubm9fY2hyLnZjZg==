@@ -1,0 +1,1 @@
+sed 's/^DS//' data/variants/combined_snps.flt.maf.vcf | sed '/^FJ//d' | sed 's/ID=DS/ID=/' | sed '/ID=FJ/d'  > data/variants/combined_snps.flt.maf.no_chr.vcf
