@@ -1,13 +1,8 @@
 #Set working directory
-
 workdir: "$HOME/scratch/admixture_analysis"
 
 #Set sample names
 SAMPLES: ["BH4_F1_2", "BH4_F2_1", "BH4_F2_2", "BH4_F3_1", "BH4_F3_2", "BH4_FBL", "BH4_MHL", "BH6_F1_1", "BH6_F1_2", "BH6_F2_1", "BH6_F2_2", "BH6_F3_1", "BH6_F3_2", "BH6_FBL", "BH6_MHL", "BH8_F1_1", "BH8_F1_2", "BH8_F2_1", "BH8_F2_2", "BH8_F3_1", "BH8_F3_2", "BH8_FBL", "BH8_MHL", "Col_Body_10", "Col_Body_11", "Col_Body_12", "Col_Body_13", "Col_Body_14", "Col_Body_15", "Col_Body_16", "Col_Body_17", "Col_Body_18", "Col_Body_19", "Col_Body_1", "Col_Body_20", "Col_Body_2", "Col_Body_3", "Col_Body_4", "Col_Body_5", "Col_Body_6", "Col_Body_7", "Col_Body_8", "Col_Body_9", "Col_Head_10", "Col_Head_11", "Col_Head_12", "Col_Head_13", "Col_Head_14", "Col_Head_15", "Col_Head_16", "Col_Head_17", "Col_Head_18", "Col_Head_19", "Col_Head_1", "Col_Head_20", "Col_Head_2", "Col_Head_3", "Col_Head_4", "Col_Head_5", "Col_Head_6", "Col_Head_7", "Col_Head_8", "Col_Head_9"]
-
-#Set population names and samples for Fst computation
-POP_1: "Col_Head"
-POP_2: "Col_Body"
 
 #Set reference genome name
 GENOME: "genomes/p_humanus_reference.fa"

@@ -33,6 +33,8 @@ rule all:
         expand("data/aligned_reads/{sample}.PE.bwa.sorted.fixed.filtered.postdup.RG.passed.mito_removed.bam.list", sample=config["SAMPLES"]),
         #call_variants
         expand("data/aligned_reads/{sample}.PE.bwa.sorted.fixed.filtered.postdup.RG.passed.mito_removed.local_realign.bam", sample=config["SAMPLES"]),
+        #make_variant_list
+        expand("data/variants/{sample}.g.vcf.gz", sample=config["SAMPLES"]),
         #combine_variant_files
         "data/variants/variants.list",
         #joint_variant_calling
@@ -53,14 +55,6 @@ rule all:
         "data/variants/combined_snps.flt.maf.no_chr.vcf",
         #filter_ld
         "data/variants/combined_snps.flt.maf.no_chr.plink",
-        #convert_vcf_to_GESTE
-        "data/variants/combined_snps.flt.maf.ld",
-        "data/population_definitions.spid",
-        #remove_temporary_files
-        "data/variants/combined_snps.flt.maf.ld",
-        "data/variants/combined_snps.flt.maf.no_chr.plink",
-        #final
-        "data/variants/combined_snps.flt.maf.ld.GESTE.txt"
 
 rule trim_reads:
     input:
@@ -174,7 +168,7 @@ rule local_realignment_ID:
     log: "logs/{sample}.local_realignment_ID.log"
     shell:
         "module load gatk;"
-        "java -jar -Xmx4g {config[GATK]} -T RealignerTargetCreator --filter_mismatching_base_and_quals --num_threads 8 -R {config[GENOME]} -I {input} -o {output} --log_to_file {log}"
+        "java -jar -Xmx4g {config[GATK]} -T RealignerTargetCreator --num_threads 8 -R {config[GENOME]} -I {input} -o {output} --log_to_file {log}"
 
 rule local_realignment:
     input:
@@ -196,7 +190,15 @@ rule call_variants:
     log: "logs/{sample}.call_variants.log"
     shell:
         "module load gatk;"
-        "java -jar -Xmx4g {config[GATK]} -T HaplotypeCaller -R {config[GENOME]} -I {input} -o {output.gvcf} -ERC GVCF -bamout {output.global_realign} --log_to_file {log}"
+        "java -jar -Xmx4g {config[GATK]} -T HaplotypeCaller -R {config[GENOME]} -I {input} -o {output.gvcf} -ERC GVCF -bamout {output.global_realign} --log_to_file {log};"
+
+rule write_variant_list:
+    input:
+        expand("data/variants/{sample}.g.vcf.gz", sample=config["SAMPLES"])
+    output:
+        variants="data/variants/variants.list"
+    shell:
+        "for file in `ls data/variants/*.g.vcf.gz`; do echo $file >> {output.variants}; done"
 
 rule combine_variant_files:
     input:
@@ -286,7 +288,7 @@ rule make_map_ped:
     log: "logs/make_bed_map.log"
     shell:
         "module load vcftools;"
-        "{config[VCFTOOLS]} --vcf {input} --plink --out {output};"
+        "vcftools --vcf {input} --plink --out {output};"
         " > {output}"
 
 rule filter_ld:
@@ -302,22 +304,3 @@ rule filter_ld:
         "plink --bfile plink --allow-extra-chr --recode vcf --out {output};"
         " > {output};"
         "rm plink*"
-
-rule convert_vcf_to_GESTE:
-    input:
-        vcf="data/variants/combined_snps.flt.maf.ld",
-        spid="data/population_definitions.spid"
-    output:
-        "data/variants/combined_snps.flt.maf.ld.GESTE.txt"
-    log: "logs/convert_vcf_to_GESTE.log"
-    shell:
-        "module load pdgspider;"
-        "java -Xmx1024m -Xms512M -jar {config[PDGSPIDER]} -inputfile {input.vcf}.vcf -inputformat VCF -outputfile {output} -outputformat GESTE_BAYE_SCAN -spid {input.spid}"
-
-rule remove_temporary_files:
-    input:
-        "data/variants/combined_snps.flt.maf.ld",
-        "data/variants/combined_snps.flt.maf.no_chr.plink"
-    log: "logs/remove_temporary_files.log"
-    shell:
-        "rm {input}"
